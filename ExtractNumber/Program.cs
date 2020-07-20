@@ -3,18 +3,22 @@ using Emgu.CV.CvEnum;
 using Emgu.CV.Structure;
 using System;
 using System.Drawing;
-using System.Drawing.Imaging;
 using System.IO;
+using Tesseract;
 
 namespace ExtractNumber
 {
     class Program
     {
-        static int x = 1680;
+        static int x = 1690;
         static int y = 950;
-        static int width = 105;
+        static int width = 90;
         static int height = 70;
-        
+
+        static Bitmap BitmapFrame;
+        static Rectangle cropArea = new Rectangle(x, y, width, height);
+        static TesseractEngine ocr = new TesseractEngine("./tessdata", "eng", EngineMode.Default);
+
         static void SetCropArea()
         {
             Console.WriteLine("x = ");
@@ -31,48 +35,51 @@ namespace ExtractNumber
         {
             if (filename == null)
             {
-                filename = Directory.GetCurrentDirectory() + "/cropImage/"
-                                        + x.ToString() + "_"
-                                        + y.ToString() + "_"
-                                        + width.ToString() + "_"
-                                        + height.ToString() + ".png";
+                filename = x.ToString() + "_"
+                                + y.ToString() + "_"
+                                + width.ToString() + "_"
+                                + height.ToString();
             }
-            img.Save(filename, ImageFormat.Png);
+            filename = Directory.GetCurrentDirectory() + "/cropImage/" + filename + ".png";
+            img.Save(filename, System.Drawing.Imaging.ImageFormat.Png);
         }
 
         static void Main(string[] args)
         {
             string videoDir = Directory.GetCurrentDirectory() + "/video/HalfLife.mp4";
-
             VideoCapture capture = new VideoCapture(videoDir);
-            int frameCount = 0;
-            int totalFrame = (int)capture.GetCaptureProperty(CapProp.FrameCount); // 影片中的影格總數;
-            Console.WriteLine(totalFrame);
 
-            Bitmap BitmapFrame;
-            Rectangle cropArea = new Rectangle(x, y, width, height);
+            Pix pixImage;
+            int frameCount = 0;
+            int totalFrame = (int)capture.GetCaptureProperty(CapProp.FrameCount);
+            Console.WriteLine(totalFrame);
 
             /* get each frame from the video */
             while (frameCount < totalFrame)
             {
-
-                /* calculate total process time */
-                // beforDT = System.DateTime.Now;
-
                 /* Crop area
                  * x:1680px  y:950px  boxsize: 105x70*/
     
                 var frame = capture.QueryFrame();
                 Console.WriteLine(frame.Width.ToString() + " " + frame.Height.ToString());
                 BitmapFrame = Crop_frame(capture.QueryFrame(), cropArea).ToBitmap();
-                SaveFile(BitmapFrame, null);
-
                 frameCount += 1;
+                
+                SaveFile(BitmapFrame, frameCount.ToString());
 
-
-                /* image processing */
-                // BitmapFrame = imageProcess.NegativePicture(BitmapFrame); //turn into negative image
-                // BitmapFrame = imageProcess.ResizeImage(BitmapFrame, 120, 76); // enlarge image(x2)
+                /* use Tesseract to recognize number */
+                try
+                {
+                    pixImage = PixConverter.ToPix(BitmapFrame); //using Tesseract_463
+                    var page = ocr.Process(pixImage);
+                    var bulletStr = page.GetText(); // 識別後的內容
+                    Console.WriteLine(frameCount.ToString() + " , String result : " + bulletStr);
+                    page.Dispose();                    
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine("Error message: " + ex.Message);
+                }
             }
         }
 
