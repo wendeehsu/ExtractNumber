@@ -1,4 +1,4 @@
-﻿using Emgu.CV;
+using Emgu.CV;
 using Emgu.CV.CvEnum;
 using Emgu.CV.Structure;
 using System;
@@ -48,6 +48,7 @@ namespace ExtractNumber
         {
             string videoDir = Directory.GetCurrentDirectory() + "/video/HalfLife.mp4";
             VideoCapture capture = new VideoCapture(videoDir);
+                ocr.DefaultPageSegMode = PageSegMode.SingleBlock;
 
             Pix pixImage;
             int frameCount = 0;
